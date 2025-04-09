@@ -40,12 +40,15 @@ class CobottControlServer(Node):
     def execute_callback(self, goal):
         self.get_logger().info('Execute goal')
         restruct_trj_ = self.get_joint_trajectory(goal.request.trajectory, deg=True, restruct=True)
-        #for x in restruct_trj_:
-        #    print(x)
+        for x in restruct_trj_:
+            print(x)
 
-        self.client.take_arm()
-        self.client.move_joint_trajectory(restruct_trj_, wait=True)
-        self.client.give_arm()
+        if self.client.is_connected():
+          self.client.take_arm()
+          self.client.move_joint_trajectory(restruct_trj_, wait=True)
+          self.client.give_arm()
+        else:
+          self.get_logger().info("Fail to move")
 
         goal.succeed()
         result = FollowJointTrajectory.Result()
@@ -70,7 +73,6 @@ class CobottControlServer(Node):
                     trj_.append(np.rad2deg(p.positions))
                 else:
                     trj_.append(p.positions)
-            #print(trj_)
             if restruct:
                 return self.restruct_waypoints(trj_)
             else:
@@ -81,15 +83,16 @@ class CobottControlServer(Node):
 
     def restruct_waypoints(self, trj, ESP=0.01):
         dt = np.array(trj[1])  - np.array(trj[0])
+        dt = dt/np.linalg.norm(dt)
         res = [trj[0]]
 
         for i in range(len(trj) - 2):
             dt_tmp = np.array(trj[i+2]) - np.array(trj[i+1])
+            dt_tmp = dt_tmp/np.linalg.norm(dt_tmp)
             if np.linalg.norm(dt - dt_tmp) > ESP :
                 res.append(trj[i+1])
                 dt = dt_tmp
         res.append(trj[-1])
-        #print(res)
         return res
 
 
