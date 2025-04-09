@@ -8,13 +8,17 @@ import numpy as np
 from moveit_msgs.action import ExecuteTrajectory
 from control_msgs.action import FollowJointTrajectory
 
-from rc8_client import Rc8Client
+try:
+  from rc8_client import Rc8Client
+except:
+  from .rc8_client import Rc8Client
 
 ACTION_NAME = '/denso_joint_trajectory_controller/follow_joint_trajectory'
 
 class CobottControlServer(Node):
     def __init__(self):
         super().__init__('cobotta_ctrl_server')
+        self.get_logger().info("=== Init BCAP Cobotta Control Server")
         self._action_server = ActionServer(self, FollowJointTrajectory, ACTION_NAME, 
                execute_callback = self.execute_callback,
                goal_callback = self.goal_callback,
@@ -22,18 +26,25 @@ class CobottControlServer(Node):
         ip_addr = "192.168.0.1"
         self.client = Rc8Client(ip_addr)
         self.client.connect()
+        self.get_logger().info("===>Start bcap controller")
 
     def connect(self):
         self.client.connect()
-        self.client.take_arm()
+        #self.client.take_arm()
+        return
+
+    def disconnect(self):
+        self.client.disconnect()
+        return
 
     def execute_callback(self, goal):
         self.get_logger().info('Execute goal')
         restruct_trj_ = self.get_joint_trajectory(goal.request.trajectory, deg=True, restruct=True)
-        for x in restruct_trj_:
-            print(x)
+        #for x in restruct_trj_:
+        #    print(x)
+
         self.client.take_arm()
-        self.client.move_joint_trajectory(restruct_trj_)
+        self.client.move_joint_trajectory(restruct_trj_, wait=True)
         self.client.give_arm()
 
         goal.succeed()
@@ -88,7 +99,7 @@ def main(args=None):
     server_ = CobottControlServer()
     rclpy.spin(server_)
 
-    #server_.client.disconnect()
+    server_.disconnect()
     server_.destroy_node()
 
 if __name__ == '__main__':

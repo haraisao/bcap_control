@@ -5,7 +5,10 @@
 #   This software licensed with  'RT Corp. Software License version.1' 
 #
 from ctypes import RTLD_LOCAL
-from bcapclient import BCAPClient
+try:
+  from bcapclient import BCAPClient
+except:
+  from .bcapclient import BCAPClient
 import time,copy
 import traceback
 
@@ -216,10 +219,13 @@ class Rc8Client(object):
       return False
     return True
 
-  def move_joint_trajectory(self, trj, way="@0"):
+  def move_joint_trajectory(self, trj, way="@0", wait=True):
+    opt_="NEXT"
     for i in range(len(trj)-1):
-      self.move_joint(trj[i], way=way)
-    self.move_joint(trj[-1], way=way, opt="")
+      self.move_joint(trj[i], way=way, opt=opt_)
+    if wait:
+        opt_=""
+    self.move_joint(trj[-1], way=way, opt=opt_)
     return
 
   def convert_j_to_p(self, j_value):
